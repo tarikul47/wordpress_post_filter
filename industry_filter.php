@@ -11,11 +11,64 @@ class Industry_Widget extends WP_Widget
      */
     function __construct()
     {
+        add_action('wp_enqueue_scripts', [$this, 'enqueue_custom_scripts']);
+        add_action('wp_ajax_custom_filter', [$this, 'custom_filter_posts']);
+        add_action('wp_ajax_nopriv_custom_filter', [$this, 'custom_filter_posts']);
+
         parent::__construct(
             'industry_Widget',
             esc_html__('Industry Widget', 'tarikul'),
             array('description' => esc_html__('A Custom Filter Widget', 'tarikul'))
         );
+    }
+
+    public function custom_filter_posts()
+    {
+        //   check_ajax_referer('custom-filter-nonce', 'nonce');
+
+        /**
+         * amar jana mothe "pre_get_posts" action hook die amra post loop ta modify korte pari
+         * but ekane ami kivabe "pre_get_posts" action hook kivabe run korte pari
+         */
+
+        print_r($_POST);
+        print_r('Raju');
+        die();
+
+        if (isset($_POST['filter_category'])) {
+            $category_ids = $_POST['filter_category'];
+            $args = array(
+                'post_type' => 'post',
+                'category__in' => $category_ids,
+            );
+
+            $query = new WP_Query($args);
+
+
+
+            if ($query->have_posts()) {
+                while ($query->have_posts()) {
+                    $query->the_post();
+                    // Display the filtered posts.
+                }
+            } else {
+                echo 'No posts found.';
+            }
+
+            wp_reset_postdata();
+        }
+        die();
+    }
+
+    public  function enqueue_custom_scripts()
+    {
+        wp_enqueue_script('jquery');
+        wp_enqueue_script('custom-filter', get_template_directory_uri() . '/js/custom-filter.js', array('jquery'), '1.0', true);
+
+        wp_localize_script('custom-filter', 'custom_filter_params', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('custom-filter-nonce')
+        ));
     }
 
     /**
@@ -93,59 +146,6 @@ function register_industry_Widget()
     register_widget('Industry_Widget');
 }
 add_action('widgets_init', 'register_industry_Widget');
-
-
-/**
- * Js include 
- */
-
-function enqueue_custom_scripts()
-{
-    wp_enqueue_script('jquery');
-    wp_enqueue_script('custom-filter', get_template_directory_uri() . '/js/custom-filter.js', array('jquery'), '1.0', true);
-
-    wp_localize_script('custom-filter', 'custom_filter_params', array(
-        'ajax_url' => admin_url('admin-ajax.php'),
-        'nonce' => wp_create_nonce('custom-filter-nonce')
-    ));
-}
-
-add_action('wp_enqueue_scripts', 'enqueue_custom_scripts');
-
-
-
-function custom_filter_posts()
-{
-    //   check_ajax_referer('custom-filter-nonce', 'nonce');
-
-    print_r($_POST);
-    die();
-
-    if (isset($_POST['filter_category'])) {
-        $category_ids = $_POST['filter_category'];
-        $args = array(
-            'post_type' => 'post',
-            'category__in' => $category_ids,
-        );
-
-        $query = new WP_Query($args);
-
-        if ($query->have_posts()) {
-            while ($query->have_posts()) {
-                $query->the_post();
-                // Display the filtered posts.
-            }
-        } else {
-            echo 'No posts found.';
-        }
-
-        wp_reset_postdata();
-    }
-    die();
-}
-
-add_action('wp_ajax_custom_filter', 'custom_filter_posts');
-add_action('wp_ajax_nopriv_custom_filter', 'custom_filter_posts');
 
 
 //add_action('pre_get_posts', 'filter_posts_by_category');
